@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'otp')) {
+        Schema::table('lg_users', function (Blueprint $table) {
+            if (!Schema::hasColumn('lg_users', 'otp')) {
                 $table->string('otp')->nullable()->after('password');
             }
 
-            if (!Schema::hasColumn('users', 'otp_expires_at')) {
+            if (!Schema::hasColumn('lg_users', 'otp_expires_at')) {
                 $table->timestamp('otp_expires_at')->nullable()->after('otp');
             }
         });
@@ -27,9 +27,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
+        Schema::table('lg_users', function (Blueprint $table) {
             $columns = array_filter(['otp', 'otp_expires_at'], function ($column) {
-                return Schema::hasColumn('users', $column);
+                return Schema::hasColumn('lg_users', $column);
             });
 
             if (!empty($columns)) {
