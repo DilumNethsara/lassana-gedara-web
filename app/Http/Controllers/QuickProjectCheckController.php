@@ -9,7 +9,25 @@ use Illuminate\View\View;
 
 class QuickProjectCheckController extends Controller
 {
-    private const WHATSAPP_NUMBER = '94706920600';
+    /**
+     * Map of agent slot → international WhatsApp number (no + prefix).
+     * Each slot corresponds to a unique form link: /quick-project-check?agent=N
+     */
+    private const WHATSAPP_NUMBERS = [
+        1 => '94706920600',
+        2 => '94706920601',
+        3 => '94706920602',
+        4 => '94706920605',
+        5 => '94706920606',
+        6 => '94706920608',
+        7 => '94706920609',
+    ];
+
+    /** Resolve an agent slot (1-7) to its WhatsApp number, defaulting to slot 1. */
+    private function resolveWhatsappNumber(int $agent): string
+    {
+        return self::WHATSAPP_NUMBERS[$agent] ?? self::WHATSAPP_NUMBERS[1];
+    }
 
     public function create(): View
     {
@@ -38,7 +56,11 @@ class QuickProjectCheckController extends Controller
             'referrer_url' => 'nullable|string|max:1000',
             'device_type' => 'nullable|string|max:60',
             'browser' => 'nullable|string|max:255',
+            'agent_slot' => 'nullable|integer|between:1,7',
         ]);
+
+        $agentSlot = (int) ($request->input('agent_slot') ?: 1);
+        $agentNumber = $this->resolveWhatsappNumber($agentSlot);
 
         $score = $this->calculateLeadScore($validated);
 
@@ -46,7 +68,7 @@ class QuickProjectCheckController extends Controller
             ...$validated,
             'lead_id' => $this->generateLeadId(),
             'consent_accepted' => true,
-            'whatsapp_redirect_clicked' => false,
+            'whatsapp_redirect_clicked' => true,
             'lead_score' => $score,
             'lead_type' => $this->classifyLead($score),
             'lead_status' => 'New Website Lead',
@@ -58,7 +80,7 @@ class QuickProjectCheckController extends Controller
             'ip_address' => $request->ip(),
         ]);
 
-        return redirect()->route('quick_project_check.thank_you', $lead);
+        return redirect()->away($this->buildWhatsappUrl($lead, $agentNumber));
     }
 
     public function thankYou(QuickProjectCheck $quickProjectCheck): View
@@ -138,8 +160,15 @@ class QuickProjectCheckController extends Controller
         return 'Low Priority';
     }
 
-    private function buildWhatsappUrl(QuickProjectCheck $lead): string
+    /**
+     * Build the wa.me URL for the given lead.
+     *
+     * @param  QuickProjectCheck  $lead
+     * @param  string|null  $whatsappNumber  International number without +. Defaults to slot-1 number.
+     */
+    private function buildWhatsappUrl(QuickProjectCheck $lead, ?string $whatsappNumber = null): string
     {
+        $number   = $whatsappNumber ?? self::WHATSAPP_NUMBERS[1];
         $landSize = $lead->land_size ?: 'Not provided';
 
         $message = implode("\n", [
@@ -159,7 +188,7 @@ class QuickProjectCheckController extends Controller
             'Please guide me with the suitable next step.',
         ]);
 
-        return 'https://wa.me/' . self::WHATSAPP_NUMBER . '?text=' . rawurlencode($message);
+        return 'https://wa.me/' . $number . '?text=' . rawurlencode($message);
     }
 
     private function detectDeviceType(?string $userAgent): string
