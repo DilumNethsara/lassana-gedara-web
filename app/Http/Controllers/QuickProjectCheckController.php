@@ -55,7 +55,8 @@ class QuickProjectCheckController extends Controller
             'landing_page_url' => 'nullable|string|max:1000',
             'referrer_url' => 'nullable|string|max:1000',
             'device_type' => 'nullable|string|max:60',
-            'browser' => 'nullable|string|max:255',
+            // In-app browsers (especially Facebook/Instagram) can send long user-agent strings.
+            'browser' => 'nullable|string|max:2048',
             'agent_slot' => 'nullable|integer|between:1,7',
         ]);
 
@@ -171,21 +172,25 @@ class QuickProjectCheckController extends Controller
         $number   = $whatsappNumber ?? self::WHATSAPP_NUMBERS[1];
         $landSize = $lead->land_size ?: 'Not provided';
 
+        $sourceText = $lead->source . ($lead->source_note ? ' - ' . $lead->source_note : '');
+
         $message = implode("\n", [
-            'Hello Lassana Gedara Constructions,',
+            'Hello Lassana Gedara Constructions, I am contacting you for a construction project inquiry.',
             '',
-            'I completed the Quick Project Check Form.',
+            'I completed the Quick Project Check Form. Here are my project details:',
             '',
-            'Lead ID: ' . $lead->lead_id,
-            'Name: ' . $lead->client_name,
-            'WhatsApp Number: ' . $lead->whatsapp_number,
-            'How I found you: ' . $lead->source . ($lead->source_note ? ' - ' . $lead->source_note : ''),
-            'Project Location: ' . $lead->project_location,
-            'Land Status: ' . $lead->land_status,
-            'Land Size: ' . $landSize,
-            'Service / Package Required: ' . $lead->service_package,
-            'Start Period: ' . $lead->start_period,
+            'Lead ID: *' . $lead->lead_id . '*',
+            'How I found you: *' . $sourceText . '*',
+            'Project Location: *' . $lead->project_location . '*',
+            'Land Status: *' . $lead->land_status . '*',
+            'Land Size: *' . $landSize . '*',
+            'Service / Package Required: *' . $lead->service_package . '*',
+            'Start Period: *' . $lead->start_period . '*',
+            '',
             'Please guide me with the suitable next step.',
+            '',
+            'Name: *' . $lead->client_name . '*',
+            'WhatsApp Number: *' . $lead->whatsapp_number . '*',
         ]);
 
         return 'https://wa.me/' . $number . '?text=' . rawurlencode($message);
