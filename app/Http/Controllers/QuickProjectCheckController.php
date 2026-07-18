@@ -67,7 +67,7 @@ class QuickProjectCheckController extends Controller
 
         $lead = QuickProjectCheck::create([
             ...$validated,
-            'lead_id' => $this->generateLeadId(),
+            'lead_id' => $this->generateLeadId($agentNumber),
             'consent_accepted' => true,
             'whatsapp_redirect_clicked' => true,
             'lead_score' => $score,
@@ -100,13 +100,15 @@ class QuickProjectCheckController extends Controller
         return redirect()->away($this->buildWhatsappUrl($quickProjectCheck));
     }
 
-    private function generateLeadId(): string
+    private function generateLeadId(string $agentPhoneNumber): string
     {
+        $agentSuffix = substr($agentPhoneNumber, -2); // last 2 digits of the agent phone number
         $year = now()->format('Y');
-        $nextNumber = QuickProjectCheck::where('lead_id', 'like', "LGC-WEB-{$year}-%")->count() + 1;
+        $prefix = "LGC-WEB-{$agentSuffix}-{$year}";
+        $nextNumber = QuickProjectCheck::where('lead_id', 'like', "{$prefix}-%")->count() + 1;
 
         do {
-            $leadId = 'LGC-WEB-' . $year . '-' . sprintf('%04d', $nextNumber);
+            $leadId = $prefix . '-' . sprintf('%04d', $nextNumber);
             $nextNumber++;
         } while (QuickProjectCheck::where('lead_id', $leadId)->exists());
 
